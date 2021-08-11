@@ -113,8 +113,8 @@ def plotRoute(rr, sites):
     for i, txt in enumerate(n):
         ax.annotate(txt, (x[i], y[i]))
 
-    ax.set_xlabel("Longitude",size = 12)
-    ax.set_ylabel("Latitude",size = 12)
+    #ax.set_xlabel("Longitude",size = 12)
+    #ax.set_ylabel("Latitude",size = 12)
     ax.ticklabel_format(useOffset=False)
     plt.grid(True)
     plt.savefig("optimalTourPath.eps")     
@@ -138,8 +138,8 @@ ax.scatter(x,y)
 for i, txt in enumerate(n):
     ax.annotate(txt, (x[i], y[i]))
 
-ax.set_xlabel("Longitude",size = 12)
-ax.set_ylabel("Latitude",size = 12)
+#ax.set_xlabel("Longitude",size = 12)
+#ax.set_ylabel("Latitude",size = 12)
 ax.ticklabel_format(useOffset=False)
 plt.grid(True)
 plt.savefig("coordinatesOfSites.eps")
@@ -376,10 +376,57 @@ ax.set_ylabel("Total Traveling Distance (km)",size = 16)
 ax.xaxis.set_minor_locator(minorLocatorX) # add minor ticks on x axis
 ax.yaxis.set_minor_locator(minorLocatorY) # add minor ticks on y axis
 plt.grid(True)
-plt.savefig("fig1.eps")
+plt.savefig("distanceVsIteration.eps")
 plt.show()   
 
 scoreCheck = distance()
 print("The checked optimal total traveling distance = {:.5f} km".format(scoreCheck))
 
+plotRoute(rCoor, sites)
+
+
+#%% Draw routes when sightseeing order is already saved in sightSeeingOrder.csv file
+from math import sqrt,exp, sin, cos, atan2, radians
+import numpy as np
+import random as rand
+from vpython import * 
+import pandas as pd
+from datetime import datetime
+import matplotlib.pyplot as plt
+from matplotlib.ticker import AutoMinorLocator
+from sklearn import preprocessing
+min_max_scaler = preprocessing.MinMaxScaler()
+
+sites = pd.read_csv("./macauWHSLoc.csv")
+rCoor = pd.read_csv("./sightSeeingOrder.csv")
+N=25
+
+def plotRoute(rr, sites):
+    x = []
+    y = []
+    n = [int(num) for num in rCoor.sitesId.tolist()]
+
+    for i in range(N+1):
+        if i == N:
+            x.append( sites.loc[n[0]].X )
+            y.append( sites.loc[n[0]].Y )
+        else:
+            x.append( sites.loc[n[i]].X )
+            y.append( sites.loc[n[i]].Y )
+    fig, ax = plt.subplots()
+    ax.title.set_text("Optimal Tour Path")
+
+    ax.plot(x,y,'k-')
+    ax.scatter(x[0],y[0],c='blue')
+    ax.scatter(x[1:-1],y[1:-1],c='red')
+
+    for i, txt in enumerate(n):
+        ax.annotate(txt, (x[i], y[i]))
+
+    #ax.set_xlabel("Latitude",size = 12)
+    #ax.set_ylabel("Longitude",size = 12)
+    ax.ticklabel_format(useOffset=False)
+    plt.grid(True)
+    plt.savefig("optimalTourPath.eps")     
+    
 plotRoute(rCoor, sites)
