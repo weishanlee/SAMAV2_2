@@ -11,8 +11,8 @@ Version 2_2: Change r in Version 1 to rCoor and r, where
              r is the normalized coordinates for plotting.
 Modification in Version 2_2: 1. distance directly used in km
                              2. the animation update is modified
-Comments: Path Plot is ok after modifying Lines 192 and 193,
-          replacing sites.X with sites.radiansX.
+                             3. Add funcion definition plotRout
+Comments: Path Plot is ok after replacing sites.X with sites.radiansX.
 """
 from math import sqrt,exp, sin, cos, atan2, radians
 import numpy as np
@@ -91,10 +91,58 @@ def outPutSitesOrder(rr):
     sitesOrder.to_csv(sitesOrder_file, sep=',', encoding='utf-8', index=False) 
     sitesOrder_file.close()
 
+def plotRoute(rr, sites):
+    x = []
+    y = []
+    n = [int(num) for num in rCoor[:,3].tolist()]
+
+    for i in range(N+1):
+        if i == N:
+            x.append( sites.loc[n[0]].X )
+            y.append( sites.loc[n[0]].Y )
+        else:
+            x.append( sites.loc[n[i]].X )
+            y.append( sites.loc[n[i]].Y )
+    fig, ax = plt.subplots()
+    ax.title.set_text("Optimal Tour Path")
+
+    ax.plot(x,y,'k-')
+    ax.scatter(x[0],y[0],c='blue')
+    ax.scatter(x[1:-1],y[1:-1],c='red')
+
+    for i, txt in enumerate(n):
+        ax.annotate(txt, (x[i], y[i]))
+
+    ax.set_xlabel("Longitude",size = 12)
+    ax.set_ylabel("Latitude",size = 12)
+    ax.ticklabel_format(useOffset=False)
+    plt.grid(True)
+    plt.savefig("optimalTourPath.eps")     
+            
 # Load world heritage sites locations
 sites = pd.read_csv("./macauWHSLoc.csv")
 R = 0.02
 N = sites.shape[0]
+
+# plot coordinates of sites
+
+x = sites.X.tolist()
+y = sites.Y.tolist()
+n = sites.SiteId.tolist()
+
+fig, ax = plt.subplots()
+ax.title.set_text("Coordinates of the Sites")
+
+ax.scatter(x,y)
+
+for i, txt in enumerate(n):
+    ax.annotate(txt, (x[i], y[i]))
+
+ax.set_xlabel("Longitude",size = 12)
+ax.set_ylabel("Latitude",size = 12)
+ax.ticklabel_format(useOffset=False)
+plt.grid(True)
+plt.savefig("coordinatesOfSites.eps")
 
 ## add radians of X and Y
 sites["radiansX"] = sites.X.apply(radians)
@@ -145,7 +193,7 @@ initScore = score
 minScore = initScore
 print("Initial score = {:.5f}\n".format(initScore))
 
-animation = True  # False
+animation = False  # False
 # Set up the graphics
 if animation == True:
     cv = canvas(center=vector(0.5,0.5,0.0), background = color.white)
@@ -328,7 +376,10 @@ ax.set_ylabel("Total Traveling Distance (km)",size = 16)
 ax.xaxis.set_minor_locator(minorLocatorX) # add minor ticks on x axis
 ax.yaxis.set_minor_locator(minorLocatorY) # add minor ticks on y axis
 plt.grid(True)
+plt.savefig("fig1.eps")
 plt.show()   
 
 scoreCheck = distance()
 print("The checked optimal total traveling distance = {:.5f} km".format(scoreCheck))
+
+plotRoute(rCoor, sites)
