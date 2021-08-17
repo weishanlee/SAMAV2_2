@@ -330,17 +330,7 @@ while (score>targetScore):
             if np.abs(score - distance())>1e-5:
                 print("score: {}".format(score))
                 print("distance: {}".format(distance()))
-                print("Error Line 290")
-        
-        if score < minScore: 
-            minScore = score
-            outPutScrVSTime(tRecord, scoreRecord)
-            outPutSitesOrder(rCoor)
-            dt = datetime.now()
-            print(dt.year, '/', dt.month, '/', dt.day, ' ',
-                  dt.hour, ':', dt.minute, ':', dt.second)
-            print("Delta score = {:.5f}".format(deltaScore))
-            print("New score = {:.5f}\n".format(score))
+                print("Error Line 333")
 
         if animation == True:    
             # Update the visualization every 100 moves
@@ -354,6 +344,16 @@ while (score>targetScore):
         if t%10==0:
             tRecord += [t0+t]
             scoreRecord += [score]
+            
+        if score < minScore: 
+            minScore = score
+            outPutScrVSTime(tRecord, scoreRecord)
+            outPutSitesOrder(rCoor)
+            dt = datetime.now()
+            print(dt.year, '/', dt.month, '/', dt.day, ' ',
+                  dt.hour, ':', dt.minute, ':', dt.second)
+            print("Delta score = {:.5f}".format(deltaScore))
+            print("New score = {:.5f}\n".format(score))
         
     t0 = t0 + t # go to next time "lump"
     firstInitial = False
@@ -383,8 +383,6 @@ scoreCheck = distance()
 print("The checked optimal total traveling distance = {:.5f} km".format(scoreCheck))
 
 plotRoute(rCoor, sites)
-
-
 #%% Draw routes when sightseeing order is already saved in sightSeeingOrder.csv file
 from math import sqrt,exp, sin, cos, atan2, radians
 import numpy as np
