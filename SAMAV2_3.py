@@ -9,15 +9,14 @@ Case 1: Helicopter-style (Santa Claus and Traveling Salesman Problem)
 Version 2_2: Change r in Version 1 to rCoor and r, where 
              rCoor refers to the real coordinates of latitude and longitude while
              r is the normalized coordinates for plotting.
-Modification in Version 2_2: 1. distance directly used in km
-                             2. the animation update is modified
-                             3. Add funcion definition plotRout
+Modification in Version 2_3: 1. make use of matplotlib animation
+                             2. Add rAnimation as the collection of r for animation
 Comments: Path Plot is ok after replacing sites.X with sites.radiansX.
 """
 from math import sqrt,exp, sin, cos, atan2, radians
 import numpy as np
 import random as rand
-from vpython import * 
+import matplotlib.animation as animation
 import pandas as pd
 from datetime import datetime
 import matplotlib.pyplot as plt
@@ -63,7 +62,7 @@ def distance():
 
 # output of the score (distance vs time steps)
 def outPutScrVSTime(tRecord, scoreRecord):
-    data = {'timeStep': tRecord,'score':scoreRecord}
+    data = {'tRecord': tRecord,'scoreRecord':scoreRecord}
     dfCSV = pd.DataFrame(data)
     dfCSV_file = open('./scoreVSTime.csv','w',newline='') 
     dfCSV.to_csv(dfCSV_file, sep=',', encoding='utf-8',index=False)
@@ -75,7 +74,7 @@ def outPutSitesOrder(rr):
     sitesOrder = []
     
     for i in range(N):
-        sitesOrder += [ rr[i,3] ]
+        sitesOrder += [ rr[i,2] ]
      
     sites["sitesOrder"] = sitesOrder
     
@@ -94,7 +93,7 @@ def outPutSitesOrder(rr):
 def plotRoute(rr, sites):
     x = []
     y = []
-    n = [int(num) for num in rCoor[:,3].tolist()]
+    n = [int(num) for num in rCoor[:,2].tolist()]
 
     for i in range(N+1):
         if i == N:
@@ -121,11 +120,9 @@ def plotRoute(rr, sites):
             
 # Load world heritage sites locations
 sites = pd.read_csv("./macauWHSLoc.csv")
-R = 0.02
 N = sites.shape[0]
 
 # plot coordinates of sites
-
 x = sites.X.tolist()
 y = sites.Y.tolist()
 n = sites.SiteId.tolist()
@@ -157,34 +154,30 @@ sites['normY'] = min_max_scaler.fit_transform(sites.Y.values.reshape(-1, 1))
 randomList = rand.sample(range(0, N), N)
 
 ## Change sites dataframe to rCoor array
-rCoor = np.empty([N+1,4])
+rCoor = np.empty([N+1,3])
 for i in range(N):
     j = randomList[i]
     rCoor[i,0] = sites.radiansX[j]
     rCoor[i,1] = sites.radiansY[j]
-    rCoor[i,2] = 0.0
-    rCoor[i,3] = sites.SiteId[j]
+    rCoor[i,2] = sites.SiteId[j]
     
 # Add one more ending site which is identical the starting site
 rCoor[N,0] = rCoor[0,0]
 rCoor[N,1] = rCoor[0,1]
 rCoor[N,2] = rCoor[0,2]
-rCoor[N,3] = rCoor[0,3]
 
 ## Change sites dataframe to r array
-r = np.empty([N+1,4])
+r = np.empty([N+1,3])
 for i in range(N):
     j = randomList[i]
     r[i,0] = sites.normX[j]
     r[i,1] = sites.normY[j]
-    r[i,2] = 0.0
-    r[i,3] = sites.SiteId[j]
+    r[i,2] = sites.SiteId[j]
     
 # Add one more ending site which is identical the starting site
 r[N,0] = r[0,0]
 r[N,1] = r[0,1]
 r[N,2] = r[0,2]
-r[N,3] = r[0,3]
 
 #Calculate the initial distance
 
@@ -193,17 +186,31 @@ initScore = score
 minScore = initScore
 print("Initial score = {:.5f}\n".format(initScore))
 
-animation = False  # False
-# Set up the graphics
-if animation == True:
-    cv = canvas(center=vector(0.5,0.5,0.0), background = color.white)
-    cv.title=" Iteration = {}.\t Total distance = {:.5f} km".format(0, score)
-    for i in range(N):
-        if i == 0:
-            sphere(pos=vector(r[i,0],r[i,1],0.0),radius=R,color = color.blue)
-        else:
-            sphere(pos=vector(r[i,0],r[i,1],0.0),radius=R,color = color.red)
-    l = curve(pos=r.tolist(),radius=R/4,color = color.black)
+animationOption = True  # False
+# Create a figure window
+if animationOption == True:
+    
+    # Add rAnimation as the collection of r for animation
+    rAnimation = []
+    rAnimation.append(r[:,0:2].tolist()[:])
+    
+    fig = plt.figure()
+    ax = fig.add_subplot(111, aspect='equal', autoscale_on=False,
+                         xlim=(-0.2, 1.2), ylim=(-0.2, 1.2))
+    ax.grid()
+
+    line, = ax.plot([], [], 'k-',lw=2)
+    dot, = ax.plot([], [], color='red', marker='o', markersize=4, markeredgecolor='red', linestyle='')
+    timeStep_text = ax.text(0.02, 0.95, '', transform=ax.transAxes)
+    score_text = ax.text(0.02, 0.90, '', transform=ax.transAxes)
+    
+    def init():
+        """initialize animation"""
+        line.set_data([], [])
+        dot.set_data([],[])
+        timeStep_text.set_text('')
+        score_text.set_text('')
+        return line, dot, timeStep_text, score_text
 
 # Simulated annealing
 # Main loop
@@ -233,48 +240,28 @@ while (score>targetScore):
             j = randomList[i]
             rCoor[i,0] = sites.radiansX[j]
             rCoor[i,1] = sites.radiansX[j]
-            rCoor[i,2] = 0.0
-            rCoor[i,3] = sites.SiteId[j]
+            rCoor[i,2] = sites.SiteId[j]
     
         # Add one more ending site which is identical the starting site
         rCoor[N,0] = rCoor[0,0]
         rCoor[N,1] = rCoor[0,1]
         rCoor[N,2] = rCoor[0,2]
-        rCoor[N,3] = rCoor[0,3]
 
         ## Change sites dataframe to r array
-        r = np.empty([N+1,4])
+        r = np.empty([N+1,3])
         for i in range(N):
             j = randomList[i]
             r[i,0] = sites.normX[j]
             r[i,1] = sites.normY[j]
-            r[i,2] = 0.0
-            r[i,3] = sites.SiteId[j]
+            r[i,2] = sites.SiteId[j]
     
         # Add one more ending site which is identical the starting site
         r[N,0] = r[0,0]
         r[N,1] = r[0,1]
-        #r[N,2] = r[0,2]
-        r[N,3] = r[0,3]
+        r[N,2] = r[0,2]
         
         #Calculate the initial distance
         score = distance()
-        
-        if animation == True:
-            # Set up the graphics
-            #cv.delete()
-            #cv = canvas(center=vector(0.5,0.5,0.0), background = color.white)
-            # Note: resetting canvas every time would make the title appear with 
-            #       a new line on the browser.
-            cv.title=" Iteration = {}.   Total distance = {:.5f} km".format(t0, score)
-            l.visible = False
-            del l
-            for i in range(N):
-                if i == 0:
-                    sphere(pos=vector(r[i,0],r[i,1],0.0),radius=R,color = color.blue)
-                else:
-                    sphere(pos=vector(r[i,0],r[i,1],0.0),radius=R,color = color.red)
-            l = curve(pos=r.tolist(),radius=R/4,color = color.black)
 
     T = Tmax
     t = 0
@@ -293,17 +280,14 @@ while (score>targetScore):
     
         rCoor[i,0],rCoor[j,0] = rCoor[j,0],rCoor[i,0]
         rCoor[i,1],rCoor[j,1] = rCoor[j,1],rCoor[i,1]
-        #rCoor[i,2],rCoor[j,2] = rCoor[j,2],rCoor[i,2]
-        rCoor[i,3],rCoor[j,3] = rCoor[j,3],rCoor[i,3]
+        rCoor[i,2],rCoor[j,2] = rCoor[j,2],rCoor[i,2]
     
         r[i,0],r[j,0] = r[j,0],r[i,0]
         r[i,1],r[j,1] = r[j,1],r[i,1]
-        #r[i,2],r[j,2] = r[j,2],r[i,2]
-        r[i,3],r[j,3] = r[j,3],r[i,3]
+        r[i,2],r[j,2] = r[j,2],r[i,2]
         
         score = distance()        
         deltaScore = score - oldScore
-        #print("deltaScore = {:.5f}".format(deltaScore))
 
         try:
             ans = np.exp(-deltaScore/T)
@@ -318,30 +302,22 @@ while (score>targetScore):
             
             rCoor[i,0],rCoor[j,0] = rCoor[j,0],rCoor[i,0]
             rCoor[i,1],rCoor[j,1] = rCoor[j,1],rCoor[i,1]
-            #rCoor[i,2],rCoor[j,2] = rCoor[j,2],rCoor[i,2]
-            rCoor[i,3],rCoor[j,3] = rCoor[j,3],rCoor[i,3]
+            rCoor[i,2],rCoor[j,2] = rCoor[j,2],rCoor[i,2]
             
             r[i,0],r[j,0] = r[j,0],r[i,0]
             r[i,1],r[j,1] = r[j,1],r[i,1]
-            #r[i,2],r[j,2] = r[j,2],r[i,2]
-            r[i,3],r[j,3] = r[j,3],r[i,3]
+            r[i,2],r[j,2] = r[j,2],r[i,2]
             
             score = oldScore
             if np.abs(score - distance())>1e-5:
                 print("score: {}".format(score))
                 print("distance: {}".format(distance()))
-                print("Error Line 333")
+                print("Error Line 315")
 
-        if animation == True:    
-            # Update the visualization every 100 moves
-            cv.title=" Iteration = {}.   Total distance = {:.5f} km".format(t0+t, score)
-            if t%100==0:
-                rate(100)
-                for i in range(N+1):
-                    pos = vector(r[i,0],r[i,1],0.0)
-                    l.modify(i,pos)
+        if animationOption == True:
+            rAnimation.append(r[:,0:2].tolist()[:])
                     
-        if t%10==0:
+        if t%1==0:
             tRecord += [t0+t]
             scoreRecord += [score]
             
@@ -358,6 +334,29 @@ while (score>targetScore):
     t0 = t0 + t # go to next time "lump"
     firstInitial = False
 # End of Main Loop
+def animate(i):
+    """perform animation step"""
+    xx = []
+    yy = []
+    for j in range(N+1):
+        xx.append(rAnimation[i][j][0])
+        yy.append(rAnimation[i][j][1])
+    line.set_data(xx,yy)
+    dot.set_data(xx,yy)
+    timeStep_text.set_text('time step = %.1f ' % tRecord[i] )
+    score_text.set_text('score = %.3f ' % scoreRecord[i] )
+    return line, dot, timeStep_text, score_text
+    
+ani = animation.FuncAnimation(fig, animate, frames=tRecord,
+                              interval=1, blit=True, init_func=init)
+
+saveAnimation = False
+if saveAnimation == True:
+    Writer = animation.writers['ffmpeg']
+    writer = Writer(fps=1, metadata=dict(artist='Me'), bitrate=-1)
+    ani.save('path.mp4', writer=writer)
+
+plt.show()
 
 print("The initial total traveling distance = {:.5f} km".format(initScore))
 print("The optimal total traveling distance = {:.5f} km".format(score))
@@ -366,8 +365,8 @@ print("The optimal total traveling distance = {:.5f} km".format(score))
 plt.figure()
 plt.title("Traveling Distance vs Iteration")
 ax = plt.gca()
-enVsTime = pd.read_csv( "./scoreVSTime.csv") 
-plt.plot(enVsTime.timeStep,enVsTime.score,'k-')
+scoreVsTime = pd.read_csv( "./scoreVSTime.csv") 
+plt.plot(scoreVsTime.tRecord,scoreVsTime.scoreRecord,'k-')
 plt.minorticks_on()
 minorLocatorX = AutoMinorLocator(5) # number of minor intervals per major # inteval
 minorLocatorY = AutoMinorLocator(5)
@@ -384,10 +383,10 @@ print("The checked optimal total traveling distance = {:.5f} km".format(scoreChe
 
 plotRoute(rCoor, sites)
 #%% Draw routes when sightseeing order is already saved in sightSeeingOrder.csv file
-from math import sqrt,exp, sin, cos, atan2, radians
+"""from math import sqrt,exp, sin, cos, atan2, radians
 import numpy as np
 import random as rand
-from vpython import * 
+#from vpython import * 
 import pandas as pd
 from datetime import datetime
 import matplotlib.pyplot as plt
@@ -427,4 +426,4 @@ def plotRoute(rr, sites):
     plt.grid(True)
     plt.savefig("optimalTourPath.eps")     
     
-plotRoute(rCoor, sites)
+plotRoute(rCoor, sites)"""
